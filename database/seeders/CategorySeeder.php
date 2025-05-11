@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Helpers\Helpers;
 use App\Models\Category;
 use App\Models\Department;
-use App\Models\Specification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -24,39 +22,29 @@ class CategorySeeder extends Seeder
 
         $products = collect(Storage::json('data/products_with_images.json'));
 
-        $departments = $products->pluck('department')->unique()->map(function ($item) {
-
+        // Crear departamentos
+        $departments = $products->pluck('department')->unique()->mapWithKeys(function ($item) {
             $slug = Str::slug($item);
-            return Department::factory()->make([
+            $department = Department::create([
                 'name' => $item,
                 'slug' => $slug,
                 'img' => "/img/departments/$slug.png",
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
+            return [$item => $department->id];
         });
 
-        Department::insert($departments->toArray());
-
-        //////////////////////////////////
-
-        $departments = Department::select('id', 'name')->get()->pluck('id', 'name');
-
-        $categories = $products->unique('category')->map(function ($item) use ($departments) {
-
+        // Crear categorías
+        $products->unique('category')->each(function ($item) use ($departments) {
             $slug = Str::slug($item['category']);
-            return Category::factory()->make([
+            Category::create([
                 'name' => $item['category'],
                 'slug' => $slug,
                 'img' => "img/categories/$slug.png",
-                'created_at' => now(),
-                'updated_at' => now(),
-                'department_id' => $departments[$item['department']]
+                'department_id' => $departments[$item['department']],
             ]);
         });
 
-        Category::insert($categories->toArray());
-
+        // Categorías tipo blog
         Category::factory()->count(5)->create([
             'type' => 'blog'
         ]);
